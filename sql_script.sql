@@ -153,8 +153,15 @@ from pickup p
 join dropoff d on p.vendorid = d.vendorid
 where pu_rank = 1 and do_rank = 1;
 
--- Ramon:
-
+-- Ramon: What is the average fare amount per observed trip hours?
+SELECT 
+    ROUND(d.trip_hours, 1) AS trip_hours_group,
+    ROUND(AVG(t.fare_amount), 2) AS avg_fare
+FROM denormalized_taxi t
+JOIN date_dimension d ON t.tripID = d.tripID
+WHERE d.trip_hours >= 0
+GROUP BY ROUND(d.trip_hours, 1)
+ORDER BY trip_hours_group;
 
 -- Nelson:
 
