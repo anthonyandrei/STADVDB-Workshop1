@@ -104,6 +104,21 @@ Given that the result is of the pearson correlation is 0.05852764063427896, we c
 */
 
 -- Count the number of trips per vendor per month per pickup location?
+SELECT
+    VendorID,
+    MONTH(tpep_pickup_datetime) AS month,
+    PUborough,
+    PUzone,
+    COUNT(*) AS trip_count
+FROM denormalized_taxi
+GROUP BY
+    VendorID,
+    MONTH(tpep_pickup_datetime),
+    PUborough,
+    PUzone
+ORDER BY
+    month, VendorID, PUborough, PUzone;
+
 
 
 -- What are the peak hours per vendor per month?
@@ -141,5 +156,12 @@ where pu_rank = 1 and do_rank = 1;
 -- Nelson:
 
 
--- Andrei:
+-- Andrei: Do trips with more than 3 passengers tend to travel longer distances?
+SELECT 
+    AVG(CASE WHEN passenger_count > 3 THEN trip_distance END) AS avg_distance_more_than_3,
+    AVG(CASE WHEN passenger_count <= 3 THEN trip_distance END) AS avg_distance_3_or_less
+FROM denormalized_taxi
+WHERE trip_distance > 0;
+-- Yes, trips with more than 3 passengers tend to travel longer distances, as the average distance for trips with more than 3 passengers is greater than that for trips with 3 or fewer passengers.
+
 
