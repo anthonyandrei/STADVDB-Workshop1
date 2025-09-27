@@ -1,3 +1,11 @@
+/*
+Group members:
+Ana Victoria R. Angat
+Ramon John L. Dela Cruz
+Nelson Darwin A. Lii
+Anthony Andrei C. Tan
+*/
+
 describe taxi_payment_details;
 describe taxi_route_details;
 describe zone_lookup;
@@ -73,3 +81,31 @@ from taxi_payment_details tpd
 join taxi_route_details trd on tpd.tripID = trd.tripID
 join zone_lookup zl1 on zl1.location_id = PULocationID
 join zone_lookup zl2 on zl2.location_id = DOLocationID;
+
+-- Which vendor got the most trips per month?
+
+
+-- Are taxis earning more if they have more passengers?
+
+
+-- Count the number of trips per vendor per month per pickup location?
+
+
+-- What are the peak hours per vendor per month?
+
+
+-- What is the top mode of payment per pickup location?
+
+
+-- QUESTIONS PER MEMBER:
+-- Ana:
+
+
+-- Ramon:
+
+
+-- Nelson:
+
+
+-- Andrei:
+
