@@ -6,10 +6,8 @@ CREATE TABLE date_dimension (
     dropoff_year INT,
     dropoff_month INT,
     dropoff_day INT,
-    trip_hours DECIMAL(6,2)
-    CONSTRAINT fk_trip
-        FOREIGN KEY (tripID)
-        REFERENCES denormalized_taxi(tripID)
+    trip_hours DECIMAL(6,2),
+    FOREIGN KEY (tripID) REFERENCES denormalized_taxi(tripID)
 );
 INSERT INTO date_dimension
 SELECT
