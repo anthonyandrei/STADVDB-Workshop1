@@ -82,11 +82,26 @@ join taxi_route_details trd on tpd.tripID = trd.tripID
 join zone_lookup zl1 on zl1.location_id = PULocationID
 join zone_lookup zl2 on zl2.location_id = DOLocationID;
 
+describe denormalized_taxi;
+
 -- Which vendor got the most trips per month?
 
 
 -- Are taxis earning more if they have more passengers?
-
+/*
+We can determine this using pearson correlation.
+*/
+select 
+	sum((passenger_count - psgr_avg) * (total_amount - amt_avg))
+    /
+    sqrt(sum(pow(passenger_count - psgr_avg, 2)) * sum(pow(total_amount - amt_avg, 2)))
+    as pearson_corr
+from denormalized_taxi, 
+(select avg(passenger_count) as psgr_avg from denormalized_taxi) x,
+(select avg(total_amount) as amt_avg from denormalized_taxi) y; 
+/*
+Given that the result is of the pearson correlation is 0.05852764063427896, we can say that there is *no* correlation between the amount taxis earn and their passenger count.
+*/
 
 -- Count the number of trips per vendor per month per pickup location?
 
