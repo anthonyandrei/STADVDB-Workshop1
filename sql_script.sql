@@ -125,6 +125,13 @@ ORDER BY
     t.PUzone;
 
 -- What are the peak hours per vendor per month?
+SELECT 	 t.VendorID,
+		 MONTH(STR_TO_DATE(t.tpep_pickup_datetime, '%c/%e/%Y %l:%i %p'))  AS pickup_month,
+		 HOUR(STR_TO_DATE(t.tpep_pickup_datetime, '%c/%e/%Y %l:%i %p'))   AS pickup_hour,
+		 COUNT(*) AS trip_count
+FROM   	 denormalized_taxi t
+GROUP BY t.VendorID, pickup_month, pickup_hour
+ORDER BY t.VendorID, pickup_month, trip_count DESC;
 
 
 -- What is the top mode of payment per pickup location?
