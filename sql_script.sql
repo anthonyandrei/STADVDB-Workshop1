@@ -113,8 +113,27 @@ Given that the result is of the pearson correlation is 0.05852764063427896, we c
 
 
 -- QUESTIONS PER MEMBER:
--- Ana:
+-- Ana: What is the least common pickup and dropoff borough for each vendor?
+-- Create indices for faster query
+create index vendor_pu on denormalized_taxi(vendorid, puborough);
+create index vendor_do on denormalized_taxi(vendorid, doborough);
+-- drop index vendor_pu on denormalized_taxi;
+-- drop index vendor_do on denormalized_taxi;
 
+with pickup as (
+	select VendorID, PUborough, count(*) as pu_count, rank() over (partition by vendorid order by count(*) asc) as pu_rank
+    from denormalized_taxi
+    group by VendorID, PUborough
+),
+dropoff as (
+	select vendorid, DOborough, count(*) as do_count, rank() over (partition by vendorid order by count(*) asc) as do_rank
+    from denormalized_taxi
+    group by vendorid, DOborough
+)
+select p.vendorid, puborough, pu_count, doborough, do_count
+from pickup p
+join dropoff d on p.vendorid = d.vendorid
+where pu_rank = 1 and do_rank = 1;
 
 -- Ramon:
 
