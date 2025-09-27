@@ -104,22 +104,25 @@ Given that the result is of the pearson correlation is 0.05852764063427896, we c
 */
 
 -- Count the number of trips per vendor per month per pickup location?
-SELECT
-    VendorID,
-    MONTH(tpep_pickup_datetime) AS month,
-    PUborough,
-    PUzone,
+SELECT 
+    t.VendorID,
+    d.pickup_month,
+    t.PUborough,
+    t.PUzone,
     COUNT(*) AS trip_count
-FROM denormalized_taxi
-GROUP BY
-    VendorID,
-    MONTH(tpep_pickup_datetime),
-    PUborough,
-    PUzone
-ORDER BY
-    month, VendorID, PUborough, PUzone;
-
-
+FROM denormalized_taxi t
+JOIN date_dimension d 
+    ON t.tripID = d.tripID
+GROUP BY 
+    t.VendorID,
+    d.pickup_month,
+    t.PUborough,
+    t.PUzone
+ORDER BY 
+    d.pickup_month, 
+    t.VendorID, 
+    t.PUborough, 
+    t.PUzone;
 
 -- What are the peak hours per vendor per month?
 
