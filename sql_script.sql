@@ -6,6 +6,10 @@ Nelson Darwin A. Lii
 Anthony Andrei C. Tan
 */
 
+#drop index trip_index_payment on taxi_payment_details;
+#drop index trip_route_index on taxi_route_details;
+#drop table denormalized_taxi;
+
 describe taxi_payment_details;
 describe taxi_route_details;
 describe zone_lookup;
@@ -14,14 +18,17 @@ select * from taxi_payment_details limit 20;
 select * from taxi_route_details limit 20;
 select * from zone_lookup limit 20;
 
+-- drop index trip_index_payment on taxi_payment_details;
+-- drop index trip_route_index on taxi_route_details;
 -- Create indices for trip ids
-create index trip_index_payment on taxi_payment_details(tripID);
-create index trip_route_index on taxi_route_details(tripID);
+create index trip_index_payment on taxi_payment_details(tripID); #Creates an index for tripID column -- It creates a lookup table for the column that makes it faster to SELECT, JOIN, WHERE, ORDER BY on when using that column during queries -- In detail, it creates a b-tree for searching to faster instead of scanning the entire table
+create index trip_route_index on taxi_route_details(tripID);     #note: do not use its index name when query, only use the original column name when the original column has been indexed.
+
+
 
 -- Make tripID column in taxi_route_details to type INT
 ALTER TABLE taxi_route_details MODIFY COLUMN tripID INT;
-
-
+#drop table denormalized_taxi;
 CREATE TABLE denormalized_taxi (
 	tripID int primary key,
 	RatecodeID bigint,
@@ -84,7 +91,42 @@ join zone_lookup zl2 on zl2.location_id = DOLocationID;
 
 describe denormalized_taxi;
 
+#drop table date_dimension;
+CREATE TABLE date_dimension (
+    tripID INT PRIMARY KEY,
+    pickup_year INT,
+    pickup_month INT,
+    pickup_day INT,
+    dropoff_year INT,
+    dropoff_month INT,
+    dropoff_day INT,
+    trip_hours DECIMAL(6,2),
+    FOREIGN KEY (tripID) REFERENCES denormalized_taxi(tripID)
+);
+INSERT INTO date_dimension
+SELECT
+    tripID,
+    YEAR(STR_TO_DATE(tpep_pickup_datetime, '%c/%e/%Y %l:%i %p'))  AS pickup_year,
+    MONTH(STR_TO_DATE(tpep_pickup_datetime, '%c/%e/%Y %l:%i %p')) AS pickup_month,
+    DAY(STR_TO_DATE(tpep_pickup_datetime, '%c/%e/%Y %l:%i %p'))   AS pickup_day,
+    YEAR(STR_TO_DATE(tpep_dropoff_datetime, '%c/%e/%Y %l:%i %p'))  AS dropoff_year,
+    MONTH(STR_TO_DATE(tpep_dropoff_datetime, '%c/%e/%Y %l:%i %p')) AS dropoff_month,
+    DAY(STR_TO_DATE(tpep_dropoff_datetime, '%c/%e/%Y %l:%i %p'))   AS dropoff_day,
+    ROUND(
+        TIMESTAMPDIFF(MINUTE,
+            STR_TO_DATE(tpep_pickup_datetime, '%c/%e/%Y %l:%i %p'),
+            STR_TO_DATE(tpep_dropoff_datetime, '%c/%e/%Y %l:%i %p')
+        ) / 60, 2
+    ) AS trip_hours
+-- NOTE: This is in percentage to easy calculate number of hours :>
+FROM denormalized_taxi;
+
+SELECT * 
+FROM date_dimension;
+
+
 -- Which vendor got the most trips per month?
+
 create index total_trip_date_index on date_dimension(pickup_year, pickup_month);
 create index total_trip_vendor_index on denormalized_taxi(VendorID);
 
@@ -111,7 +153,6 @@ from total_trips t join ( #Subquery to get the max trips per month
 							on t.pickup_year = m.pickup_year
                             and t.pickup_month = m.pickup_month
                             and t.total_trips = m.max_trips; #Based on subquery to get the total trips per vendor per month, this join will end up only getting the vendors with the max trips per month
-
 
 
 
@@ -182,15 +223,16 @@ from payment_counts p join (    #subquery to get the max trips per PUZone
                                 and p.total_trips = m.max_trips; #Based on subquery of payment counts per pickup location and payment type, this join will only end up getting the payment_type with the max trips per PUZone
  
 
+
 -- QUESTIONS PER MEMBER:
 -- Ana: What is the least common pickup and dropoff borough for each vendor?
 -- Create indices for faster query
-create index vendor_pu on denormalized_taxi(vendorid, puborough);
+create index vendor_pu on denormalized_taxi(vendorid, puborough); #If you index multiple columns, the indexing will follow the leftmost prefix rule . ex. indexing column(tripID, payment_type, VendorID) works for queries that uses (tripID, payment_type, VendorID), (tripID, payment_type), (tripID) BUT NOT (payment_type, VendorID), (payment_type), and (VendorID)
 create index vendor_do on denormalized_taxi(vendorid, doborough);
 -- drop index vendor_pu on denormalized_taxi;
 -- drop index vendor_do on denormalized_taxi;
 
-with pickup as (
+with pickup as ( #WITH clause is like a subquery, where you create a sub-table of data from the table you are using so that you can use the sub-table for efficient queries(note: you know how every query in SQL always results to a table? to which you can reference it as a subquery?)
 	select VendorID, PUborough, count(*) as pu_count, rank() over (partition by vendorid order by count(*) asc) as pu_rank
     from denormalized_taxi
     group by VendorID, PUborough
@@ -247,8 +289,6 @@ from total_trips t join ( #Subquery to get the max trips per month
 -- For 2025, month 1, the most popular drop off location is Upper East Side North with 48964 total trips
 
 
-
-
 -- Andrei: Do trips with more than 3 passengers tend to travel longer distances?
 SELECT 
     AVG(CASE WHEN passenger_count > 3 THEN trip_distance END) AS avg_distance_more_than_3,
@@ -256,5 +296,4 @@ SELECT
 FROM denormalized_taxi
 WHERE trip_distance > 0;
 -- Yes, trips with more than 3 passengers tend to travel longer distances, as the average distance for trips with more than 3 passengers is greater than that for trips with 3 or fewer passengers.
-
 
