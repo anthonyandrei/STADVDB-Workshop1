@@ -85,6 +85,34 @@ join zone_lookup zl2 on zl2.location_id = DOLocationID;
 describe denormalized_taxi;
 
 -- Which vendor got the most trips per month?
+create index total_trip_date_index on date_dimension(pickup_year, pickup_month);
+create index total_trip_vendor_index on denormalized_taxi(VendorID);
+
+#drop index total_trip_date_index on date_dimension;
+#drop index total_trip_vendor_index on denormalized_taxi;
+
+# subquery to get the total trips per vendor per month
+with total_trips as (select dd.pickup_year,
+	   dd.pickup_month,
+       dt.VendorID,
+       count(*) as total_trips #Counts every record and For each unique (year, month, vendor) combination, count the number of times it appears in a record
+from denormalized_taxi dt join date_dimension dd 		on dt.tripID = dd.tripID
+group by dd.pickup_year, dd.pickup_month, dt.VendorID) #Group each records based on these columns
+
+select t.pickup_year,
+	   t.pickup_month,
+       t.VendorID,
+	   t.total_trips
+from total_trips t join ( #Subquery to get the max trips per month
+							select pickup_year, pickup_month, max(total_trips) as max_trips
+                            from total_trips
+                            group by pickup_year, pickup_month
+                            ) m
+							on t.pickup_year = m.pickup_year
+                            and t.pickup_month = m.pickup_month
+                            and t.total_trips = m.max_trips; #Based on subquery to get the total trips per vendor per month, this join will end up only getting the vendors with the max trips per month
+
+
 
 
 -- Are taxis earning more if they have more passengers?
@@ -136,6 +164,23 @@ ORDER BY t.VendorID, pickup_month, trip_count DESC;
 
 -- What is the top mode of payment per pickup location?
 
+create index total_trip_payment_PUzone_index on denormalized_taxi(PUzone, payment_type);
+
+#drop index total_trip_payment_PUzone_index on denormalized_taxi;
+
+#Subquery to get payment counts per pickup location and payment type
+with payment_counts as (select PUzone, payment_type, count(*) total_trips #Count each record for each unique combination
+from denormalized_taxi
+group by PUzone, payment_type) #group records based on these columns
+
+select p.PUzone, p.payment_type, p.total_trips
+from payment_counts p join (    #subquery to get the max trips per PUZone
+								select PUzone, max(total_trips) as max_trips 
+                                from payment_counts
+                                group by PUzone) m
+                                on p.PUzone = m.PUzone
+                                and p.total_trips = m.max_trips; #Based on subquery of payment counts per pickup location and payment type, this join will only end up getting the payment_type with the max trips per PUZone
+ 
 
 -- QUESTIONS PER MEMBER:
 -- Ana: What is the least common pickup and dropoff borough for each vendor?
@@ -170,7 +215,38 @@ WHERE d.trip_hours >= 0
 GROUP BY ROUND(d.trip_hours, 1)
 ORDER BY trip_hours_group;
 
--- Nelson:
+-- Nelson: Which dropoff location is the most popular per month
+
+create index total_trip_date_index on date_dimension(dropoff_year, dropoff_month);
+create index total_trip_dropoff_index on denormalized_taxi(DOzone);
+
+#drop index total_trip_date_index on date_dimension;
+#drop index total_trip_dropoff_index on denormalized_taxi;
+
+# subquery to get the total trips per drop off locations per month
+ with total_trips as (select dd.dropoff_year,
+	   dd.dropoff_month,
+       dt.DOzone,
+       count(*) as total_trips #Counts every record and For each unique combination, count the number of times it appears in a record
+from denormalized_taxi dt join date_dimension dd 		on dt.tripID = dd.tripID
+group by dd.dropoff_year, dd.dropoff_month, dt.DOzone) #Group each records based on these columns
+
+select t.dropoff_year,
+	   t.dropoff_month,
+       t.DOzone,
+	   t.total_trips
+from total_trips t join ( #Subquery to get the max trips per month
+							select dropoff_year, dropoff_month, max(total_trips) as max_trips
+                            from total_trips
+                            group by dropoff_year, dropoff_month
+                            ) m
+							on t.dropoff_year = m.dropoff_year
+                            and t.dropoff_month = m.dropoff_month
+                            and t.total_trips = m.max_trips; #Based on subquery to get the total trips per vendor per month, this join will end up only getting the vendors with the max trips per month
+-- For 2024, month 12, the most popular drop off location is Lenox Hill West with 2 total trips
+-- For 2025, month 1, the most popular drop off location is Upper East Side North with 48964 total trips
+
+
 
 
 -- Andrei: Do trips with more than 3 passengers tend to travel longer distances?
